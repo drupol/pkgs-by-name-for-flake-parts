@@ -1,4 +1,4 @@
-toplevel@{ lib, flake-parts-lib, ... }:
+toplevel@{ lib, flake-parts-lib, inputs, ... }:
 let
   inherit (flake-parts-lib)
     mkPerSystemOption
@@ -32,7 +32,6 @@ in
         config,
         pkgs,
         lib,
-        inputs,
         ...
       }:
       {
