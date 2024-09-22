@@ -2,10 +2,12 @@
 
 # pkgs-by-name for flake.parts
 
-This project is a module for [flake.parts], a framework for Nix flakes.
+This project provides a [flake.parts] module that automatically loads Nix
+packages from a specified directory. It transforms a directory tree containing
+package files suitable for `callPackage` into a corresponding nested attribute
+set of derivations.
 
-It provides a module that can be used to autoload packages under a particular
-directory and make them available in your own flake.
+For documentation and examples, please refer to the [manual].
 
 ## Usage
 
@@ -43,3 +45,4 @@ Then configure the module:
 [flake.parts]: https://flake.parts
 [5]: https://github.com/sponsors/drupol
 [donate github]: https://img.shields.io/badge/Sponsor-Github-brightgreen.svg?style=flat-square
+[manual]: https://nixos.org/manual/nixpkgs/stable/index.html#function-library-lib.filesystem.packagesFromDirectoryRecursive
