@@ -40,43 +40,42 @@ in
         ...
       }:
       let
+        scope = lib.makeScope pkgs.newScope (self: {
+          inherit inputs;
+        });
+
         flattenAttrs =
-          attrSet:
+          attrSet: cp:
           let
             flatten =
               attrSet: prefix:
-              let
-                names = builtins.attrNames attrSet;
-                results = builtins.foldl' (
-                  acc: name:
-                  let
-                    value = attrSet.${name};
-                    newKey = if prefix == "" then name else "${prefix}/${name}";
-                  in
-                  if lib.isDerivation value then acc // { ${newKey} = value; } else acc // (flatten value newKey)
-                ) { } names;
-              in
-              results;
+              builtins.foldl' (
+                acc: name:
+                let
+                  value = attrSet.${name};
+                  newKey = if prefix == "" then name else "${prefix}/${name}";
+                in
+                if lib.isFunction value then acc // { ${newKey} = value cp; } else acc // (flatten value newKey)
+              ) { } (builtins.attrNames attrSet);
           in
           flatten attrSet "";
-
-        legacyPackages =
-          let
-            scope = lib.makeScope pkgs.newScope (self: {
-              inherit inputs;
-            });
-          in
-          lib.optionalAttrs (config.pkgsDirectory != null) (
-            lib.filesystem.packagesFromDirectoryRecursive {
-              inherit (scope) callPackage;
-              directory = config.pkgsDirectory;
-            }
-          );
       in
       {
-        inherit legacyPackages;
+        legacyPackages = lib.optionalAttrs (config.pkgsDirectory != null) (
+          lib.filesystem.packagesFromDirectoryRecursive {
+            directory = config.pkgsDirectory;
+            inherit (scope) callPackage;
+          }
+        );
 
-        packages = flattenAttrs legacyPackages;
+        packages = lib.optionalAttrs (config.pkgsDirectory != null) (
+          flattenAttrs (lib.filesystem.packagesFromDirectoryRecursive {
+            directory = config.pkgsDirectory;
+            callPackage =
+              file: args: cp:
+              cp file args;
+          }) scope.callPackage
+        );
       };
   };
 }
