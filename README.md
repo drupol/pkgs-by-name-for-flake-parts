@@ -9,7 +9,7 @@ set of derivations.
 
 For documentation and examples, please refer to the [manual].
 
-## Usage
+## Installation
 
 The structure of the directory containing the packages
 is the same structure as the `pkgs/by-name` directory from `nixpkgs`.
@@ -38,9 +38,16 @@ Then configure the module:
     };
 ```
 
-## TODO
+## Usage
 
-- [ ] Automatically imports the discovered packages in the `pkgs` argument.
+Once the module is configured, it does two things.
+
+1. It builds the `packages` attribute of your flake by flattening the tree
+   structure of your filesystem (specified in the `pkgsDirectory` attribute)
+   into a flat list of packages.
+2. It builds a `legacyPackages` attribute in your flake, allowing you to access
+   the packages using the same hierarchical structure as the package directory
+   specified in the `pkgsDirectory` attribute.
 
 [flake.parts]: https://flake.parts
 [5]: https://github.com/sponsors/drupol

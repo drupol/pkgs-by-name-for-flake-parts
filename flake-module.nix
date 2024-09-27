@@ -1,4 +1,9 @@
-toplevel@{ lib, flake-parts-lib, inputs, ... }:
+toplevel@{
+  lib,
+  flake-parts-lib,
+  inputs,
+  ...
+}:
 let
   inherit (flake-parts-lib)
     mkPerSystemOption
@@ -34,8 +39,28 @@ in
         lib,
         ...
       }:
-      {
-        packages =
+      let
+        flattenAttrs = attrSet:
+        let
+            flatten = attrSet: prefix:
+            let
+                names = builtins.attrNames attrSet;
+                results = builtins.foldl' (acc: name:
+                let
+                    value = attrSet.${name};
+                    newKey = if prefix == "" then name else "${prefix}/${name}";
+                in
+                    if lib.isDerivation value then
+                    acc // { ${newKey} = value; }
+                    else
+                    acc // (flatten value newKey)
+                ) {} names;
+            in
+                results;
+        in
+            flatten attrSet "";
+
+        legacyPackages =
           let
             scope = lib.makeScope pkgs.newScope (self: {
               inherit inputs;
@@ -47,6 +72,11 @@ in
               directory = config.pkgsDirectory;
             }
           );
+      in
+      {
+        inherit legacyPackages;
+
+        packages = flattenAttrs legacyPackages;
       };
   };
 }
