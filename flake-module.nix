@@ -28,7 +28,7 @@ in
           };
 
           pkgsNameSeparator = mkOption {
-            type = types.string;
+            type = types.str;
             default = "/";
             description = ''
               The separator to use when flattening package names.
@@ -41,18 +41,18 @@ in
 
   config = {
     perSystem =
-      {
-        config,
-        pkgs,
-        ...
-      }:
+      { config, pkgs, ... }:
       let
         scope = lib.makeScope pkgs.newScope (self: {
           inherit inputs;
         });
 
         flattenAttrs =
-          attrSet: separator: callPackage:
+          {
+            attrs ? { },
+            separator ? "/",
+            callback ? pkgs.callPackage,
+          }:
           let
             flatten =
               attrSet: prefixes:
@@ -62,16 +62,14 @@ in
                   newValue = attrSet.${name};
                   newKey = prefixes ++ [ name ];
                 in
-                acc
-                // (
-                  if lib.isFunction newValue then
-                    { ${lib.concatStringsSep separator newKey} = newValue callPackage; }
-                  else
-                    (flatten newValue newKey)
-                )
+                if lib.isFunction newValue then
+                  acc // { ${lib.concatStringsSep separator newKey} = newValue callback; }
+                else
+                  acc // (flatten newValue newKey)
+
               ) { } (builtins.attrNames attrSet);
           in
-          flatten attrSet [ ];
+          flatten attrs [ ];
       in
       {
         legacyPackages = lib.optionalAttrs (config.pkgsDirectory != null) (
@@ -81,14 +79,16 @@ in
           }
         );
 
-        packages = lib.optionalAttrs (config.pkgsDirectory != null) (
-          flattenAttrs (lib.filesystem.packagesFromDirectoryRecursive {
+        packages = lib.optionalAttrs (config.pkgsDirectory != null) (flattenAttrs {
+          attrs = lib.filesystem.packagesFromDirectoryRecursive {
             directory = config.pkgsDirectory;
             callPackage =
-              file: args: callPackage:
-              callPackage file args;
-          }) config.pkgsNameSeparator scope.callPackage
-        );
+              file: args: callback:
+              callback file args;
+          };
+          separator = config.pkgsNameSeparator;
+          callback = scope.callPackage;
+        });
       };
   };
 }
