@@ -52,6 +52,16 @@ Once the module is configured, it does two things:
    specified in the `pkgsDirectory` attribute. This means you can reference
    packages as if they were still organized in the original tree structure.
 
+## Configuration
+
+This module has the following configuration attributes:
+
+- `pkgsDirectory`: The directory containing the packages. This directory
+  should contain a tree of Nix files suitable for `callPackage`. The default
+  value is `null`.
+- `pkgsNameSeparator`: The separator used to concatenate the package name. The
+  default value is `/`.
+
 [flake.parts]: https://flake.parts
 [5]: https://github.com/sponsors/drupol
 [donate github]: https://img.shields.io/badge/Sponsor-Github-brightgreen.svg?style=flat-square

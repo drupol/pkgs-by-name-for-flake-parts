@@ -26,6 +26,14 @@ in
               If set, the flake will import packages from the specified directory.
             '';
           };
+
+          pkgsNameSeparator = mkOption {
+            type = types.string;
+            default = "/";
+            description = ''
+              The separator to use when flattening package names.
+            '';
+          };
         };
       }
     );
@@ -36,7 +44,6 @@ in
       {
         config,
         pkgs,
-        lib,
         ...
       }:
       let
@@ -45,20 +52,26 @@ in
         });
 
         flattenAttrs =
-          attrSet: cp:
+          attrSet: separator: callPackage:
           let
             flatten =
-              attrSet: prefix:
+              attrSet: prefixes:
               builtins.foldl' (
                 acc: name:
                 let
-                  value = attrSet.${name};
-                  newKey = if prefix == "" then name else "${prefix}/${name}";
+                  newValue = attrSet.${name};
+                  newKey = prefixes ++ [ name ];
                 in
-                if lib.isFunction value then acc // { ${newKey} = value cp; } else acc // (flatten value newKey)
+                acc
+                // (
+                  if lib.isFunction newValue then
+                    { ${lib.concatStringsSep separator newKey} = newValue callPackage; }
+                  else
+                    (flatten newValue newKey)
+                )
               ) { } (builtins.attrNames attrSet);
           in
-          flatten attrSet "";
+          flatten attrSet [ ];
       in
       {
         legacyPackages = lib.optionalAttrs (config.pkgsDirectory != null) (
@@ -72,9 +85,9 @@ in
           flattenAttrs (lib.filesystem.packagesFromDirectoryRecursive {
             directory = config.pkgsDirectory;
             callPackage =
-              file: args: cp:
-              cp file args;
-          }) scope.callPackage
+              file: args: callPackage:
+              callPackage file args;
+          }) config.pkgsNameSeparator scope.callPackage
         );
       };
   };
