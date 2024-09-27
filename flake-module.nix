@@ -40,25 +40,25 @@ in
         ...
       }:
       let
-        flattenAttrs = attrSet:
-        let
-            flatten = attrSet: prefix:
-            let
+        flattenAttrs =
+          attrSet:
+          let
+            flatten =
+              attrSet: prefix:
+              let
                 names = builtins.attrNames attrSet;
-                results = builtins.foldl' (acc: name:
-                let
+                results = builtins.foldl' (
+                  acc: name:
+                  let
                     value = attrSet.${name};
                     newKey = if prefix == "" then name else "${prefix}/${name}";
-                in
-                    if lib.isDerivation value then
-                    acc // { ${newKey} = value; }
-                    else
-                    acc // (flatten value newKey)
-                ) {} names;
-            in
-                results;
-        in
-            flatten attrSet "";
+                  in
+                  if lib.isDerivation value then acc // { ${newKey} = value; } else acc // (flatten value newKey)
+                ) { } names;
+              in
+              results;
+          in
+          flatten attrSet "";
 
         legacyPackages =
           let
