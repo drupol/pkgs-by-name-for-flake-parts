@@ -40,14 +40,17 @@ Then configure the module:
 
 ## Usage
 
-Once the module is configured, it does two things.
+Once the module is configured, it does two things:
 
-1. It builds the `packages` attribute of your flake by flattening the tree
-   structure of your filesystem (specified in the `pkgsDirectory` attribute)
-   into a flat list of packages.
-2. It builds a `legacyPackages` attribute in your flake, allowing you to access
+1. It builds the Flake's `packages` attribute by recursively traversing the
+   directory specified in the `pkgsDirectory` attribute. This directory,
+   which may have a nested tree structure, is transformed into a flat list of
+   packages. Each package is named by concatenating its relative directory path
+   from `pkgsDirectory` to the package itself.
+2. It builds the Flake's `legacyPackages` attribute by allowing you to access
    the packages using the same hierarchical structure as the package directory
-   specified in the `pkgsDirectory` attribute.
+   specified in the `pkgsDirectory` attribute. This means you can reference
+   packages as if they were still organized in the original tree structure.
 
 [flake.parts]: https://flake.parts
 [5]: https://github.com/sponsors/drupol
