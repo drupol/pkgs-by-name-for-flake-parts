@@ -51,7 +51,7 @@ in
           {
             attrs ? { },
             separator ? "/",
-            callback ? pkgs.callPackage,
+            callback,
           }:
           let
             flatten =

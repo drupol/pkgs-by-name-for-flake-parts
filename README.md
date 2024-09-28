@@ -62,6 +62,69 @@ This module has the following configuration attributes:
 - `pkgsNameSeparator`: The separator used to concatenate the package name. The
   default value is `/`.
 
+## Example
+
+Given this `flake.nix` file:
+
+```nix
+{
+  inputs = {
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    pkgs-by-name-for-flake-parts.url = "github:drupol/pkgs-by-name-for-flake-parts";
+  };
+
+  outputs = inputs@{ flake-parts, ... }: flake-parts.lib.mkFlake { inherit inputs; } {
+    systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
+    imports = [
+      inputs.pkgs-by-name-for-flake-parts.flakeModule
+    ];
+    perSystem = { ... }: {
+      pkgsDirectory = ./nix/pkgs-by-name;
+    };
+  };
+}
+```
+
+In this given this directory structure:
+
+```
+/flake.lock
+/flake.nix
+/nix
+└── pkgs-by-name
+    ├── a
+    │   └── package.nix
+    └── b
+        └── c
+            └── package.nix
+```
+
+The content of the `package.nix` files is not important, but they should be
+suitable for `callPackage`. In this example, both files contains:
+`{ hello }: hello`.
+
+The following REPL session demonstrates how to access the discovered packages:
+
+```
+❯ nix repl
+Nix 2.24.8
+nix-repl> :lf .
+Added 18 variables.
+
+nix-repl> outputs.legacyPackages.x86_64-linux.a
+«derivation /nix/store/af3rc6phyv80h7aq4y3d08awnq2ja8fp-hello-2.12.1.drv»
+
+nix-repl> outputs.packages.x86_64-linux.a
+«derivation /nix/store/af3rc6phyv80h7aq4y3d08awnq2ja8fp-hello-2.12.1.drv»
+
+nix-repl> outputs.legacyPackages.x86_64-linux.b.c
+«derivation /nix/store/af3rc6phyv80h7aq4y3d08awnq2ja8fp-hello-2.12.1.drv»
+
+nix-repl> outputs.packages.x86_64-linux."b/c"
+«derivation /nix/store/af3rc6phyv80h7aq4y3d08awnq2ja8fp-hello-2.12.1.drv»
+```
+
 [flake.parts]: https://flake.parts
 [5]: https://github.com/sponsors/drupol
 [donate github]: https://img.shields.io/badge/Sponsor-Github-brightgreen.svg?style=flat-square
