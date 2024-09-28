@@ -71,15 +71,13 @@ in
           in
           flatten attrs [ ];
       in
-      {
-        legacyPackages = lib.optionalAttrs (config.pkgsDirectory != null) (
-          lib.filesystem.packagesFromDirectoryRecursive {
-            directory = config.pkgsDirectory;
-            inherit (scope) callPackage;
-          }
-        );
+      lib.mkIf (config.pkgsDirectory != null) {
+        legacyPackages = lib.filesystem.packagesFromDirectoryRecursive {
+          directory = config.pkgsDirectory;
+          inherit (scope) callPackage;
+        };
 
-        packages = lib.optionalAttrs (config.pkgsDirectory != null) (flattenAttrs {
+        packages = flattenAttrs {
           attrs = lib.filesystem.packagesFromDirectoryRecursive {
             directory = config.pkgsDirectory;
             callPackage =
@@ -88,7 +86,7 @@ in
           };
           separator = config.pkgsNameSeparator;
           callback = scope.callPackage;
-        });
+        };
       };
   };
 }
