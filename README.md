@@ -17,25 +17,25 @@ is the same structure as the `pkgs/by-name` directory from `nixpkgs`.
 The first step is to import the input.
 
 ```nix
-    inputs = {
-        pkgs-by-name-for-flake-parts.url = "github:drupol/pkgs-by-name-for-flake-parts";
-    };
+  inputs = {
+      pkgs-by-name-for-flake-parts.url = "github:drupol/pkgs-by-name-for-flake-parts";
+  };
 ```
 
 Then, import the module:
 
 ```nix
-    imports = [
-        inputs.pkgs-by-name-for-flake-parts.flakeModule
-    ];
+  imports = [
+      inputs.pkgs-by-name-for-flake-parts.flakeModule
+  ];
 ```
 
 Then configure the module:
 
 ```nix
-    perSystem = {
-        pkgsDirectory = ./nix/pkgs;
-    };
+  perSystem = {
+      pkgsDirectory = ./nix/pkgs;
+  };
 ```
 
 ## Usage
@@ -86,7 +86,7 @@ Given this `flake.nix` file:
 }
 ```
 
-In this given this directory structure:
+In this given directory structure:
 
 ```
 /flake.lock
