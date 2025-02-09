@@ -43,50 +43,38 @@ in
     perSystem =
       { config, pkgs, ... }:
       let
-        scope = lib.makeScope pkgs.newScope (self: {
-          inherit inputs;
-        });
+        flattenPkgs =
+          separator: path: value:
+          if lib.isDerivation value then
+            {
+              ${lib.concatStringsSep separator path} = value;
+            }
+          else
+            lib.concatMapAttrs (name: flattenPkgs separator (path ++ [ name ])) value;
 
-        flattenAttrs =
-          {
-            attrs ? { },
-            separator ? "/",
-            callback,
-          }:
-          let
-            flatten =
-              attrSet: prefixes:
-              builtins.foldl' (
-                acc: name:
-                let
-                  newValue = attrSet.${name};
-                  newKey = prefixes ++ [ name ];
-                in
-                if lib.isFunction newValue then
-                  acc // { ${lib.concatStringsSep separator newKey} = newValue callback; }
-                else
-                  acc // (flatten newValue newKey)
+        scopeFromDirectory =
+          directory:
+          lib.makeScope pkgs.newScope (
+            self:
+            lib.filesystem.packagesFromDirectoryRecursive {
+              inherit directory;
+              callPackage = self.newScope { inherit inputs; };
+            }
+          );
 
-              ) { } (builtins.attrNames attrSet);
-          in
-          flatten attrs [ ];
+        scope = scopeFromDirectory config.pkgsDirectory;
+
+        # scope.packages is the second function we passed to makeScope. makeScope
+        # calculates the fixpoint of the scope for us, ie. when we now call this
+        # function with scope, scope.callPackage will "know" all locally defined
+        # packages.
+        # We don't have to worry about the performance of this function call, since
+        # Nix is lazy and doesn't compute any equivalent expression more than once.
+        legacyPackages = scope.packages scope;
       in
       lib.mkIf (config.pkgsDirectory != null) {
-        legacyPackages = lib.filesystem.packagesFromDirectoryRecursive {
-          directory = config.pkgsDirectory;
-          inherit (scope) callPackage;
-        };
-
-        packages = flattenAttrs {
-          attrs = lib.filesystem.packagesFromDirectoryRecursive {
-            directory = config.pkgsDirectory;
-            callPackage =
-              file: args: callback:
-              callback file args;
-          };
-          separator = config.pkgsNameSeparator;
-          callback = scope.callPackage;
-        };
+        inherit legacyPackages;
+        packages = flattenPkgs config.pkgsNameSeparator [ ] legacyPackages;
       };
   };
 }

@@ -3,22 +3,21 @@
 # pkgs-by-name for flake.parts
 
 This project provides a [flake.parts] module that automatically loads Nix
-packages from a specified directory. It transforms a directory tree containing
-package files suitable for `callPackage` into a corresponding nested attribute
-set of derivations.
-
-For documentation and examples, please refer to the [manual].
+packages from a specified directory via [packagesFromDirectoryRecursive]. It
+transforms a directory tree containing package files suitable for `callPackage`
+into a corresponding attribute set of derivations that conforms to the Flake
+standard.
 
 ## Installation
 
 The structure of the directory containing the packages
 is the same structure as the `pkgs/by-name` directory from `nixpkgs`.
 
-The first step is to import the input.
+The first step is to add this module as an input to your flake.
 
 ```nix
   inputs = {
-      pkgs-by-name-for-flake-parts.url = "github:drupol/pkgs-by-name-for-flake-parts";
+    pkgs-by-name-for-flake-parts.url = "github:drupol/pkgs-by-name-for-flake-parts";
   };
 ```
 
@@ -26,15 +25,15 @@ Then, import the module:
 
 ```nix
   imports = [
-      inputs.pkgs-by-name-for-flake-parts.flakeModule
+    inputs.pkgs-by-name-for-flake-parts.flakeModule
   ];
 ```
 
-Then configure the module:
+and configure it:
 
 ```nix
   perSystem = {
-      pkgsDirectory = ./nix/pkgs;
+    pkgsDirectory = ./nix/pkgs;
   };
 ```
 
@@ -42,15 +41,22 @@ Then configure the module:
 
 Once the module is configured, it does two things:
 
-1. It builds the Flake's `packages` attribute by recursively traversing the
-   directory specified in the `pkgsDirectory` attribute. This directory,
-   which may have a nested tree structure, is transformed into a flat list of
-   packages. Each package is named by concatenating its relative directory path
-   from `pkgsDirectory` to the package itself.
-2. It builds the Flake's `legacyPackages` attribute by allowing you to access
-   the packages using the same hierarchical structure as the package directory
-   specified in the `pkgsDirectory` attribute. This means you can reference
-   packages as if they were still organized in the original tree structure.
+1. It transforms the directory tree of `pkgsDirectory` into a nested attribute
+   set of derivations via [packagesFromDirectoryRecursive].
+   This set is made available as the Flake's `legacyPackages` attribute. You can
+   read more about the expected folder structure at the link above.
+2. To conform to the Flake standards, this set is then flattened. Each
+   derivation is assigned its path as a name, with the separator being
+   configurable.
+
+- You can access flake inputs from package files by adding an `inputs`
+  parameter, it will be automatically populated with a set containing all your
+  inputs.
+- You can access all other packages you have defined in this folder or its
+  subfolders:
+  - If it's a top-level package, add its name to your package's parameters.
+  - If it's a package in a subfolder, add the top-level folder's name to your
+    package's parameters.
 
 ## Configuration
 
@@ -72,6 +78,11 @@ Given this `flake.nix` file:
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     pkgs-by-name-for-flake-parts.url = "github:drupol/pkgs-by-name-for-flake-parts";
+    # Some non-flake sources for our packages
+    example-src = {
+      url = "github:ghost/example";
+      flake = false;
+    };
   };
 
   outputs = inputs@{ flake-parts, ... }: flake-parts.lib.mkFlake { inherit inputs; } {
@@ -80,52 +91,91 @@ Given this `flake.nix` file:
       inputs.pkgs-by-name-for-flake-parts.flakeModule
     ];
     perSystem = { ... }: {
-      pkgsDirectory = ./nix/pkgs-by-name;
+      pkgsDirectory = ./packages;
     };
   };
 }
+
 ```
 
 In this given directory structure:
 
 ```
-/flake.lock
-/flake.nix
-/nix
-└── pkgs-by-name
-    ├── a
-    │   └── package.nix
-    └── b
-        └── c
-            └── package.nix
+.
+├── flake.lock
+├── flake.nix
+└── packages
+    ├── pkg1
+    │   └── package.nix
+    └── subdirectory
+        └── pkg2.nix
 ```
 
-The content of the `package.nix` files is not important, but they should be
-suitable for `callPackage`. In this example, both files contains:
-`{ hello }: hello`.
+`pkg1` depends on `pkg2`:
 
-The following REPL session demonstrates how to access the discovered packages:
+```nix
+# ./packages/pkg1/package.nix
+{ stdenv, dir }:
+stdenv.mkDerivation {
+  name = "pkg1";
+  # `subdirectory` contains all packages in the folder `packages/subdirectory`
+  buildInputs = [ subdirectory.pkg2 ];
+}
+```
+
+`pkg2` depends on an input:
+
+```nix
+# ./packages/subdirectory/pkg2.nix
+{ stdenv, inputs }:
+stdenv.mkDerivation {
+  name = "pkg2";
+  src = inputs.example-src;
+}
+```
+
+Note how this package does not have its own directory. You can have either
+`<package name>/package.nix`, or `<package name>.nix`. The former is useful if
+you want to split the package into multiple nix files.
+
+
+This is the structure of the resulting flake outputs:
 
 ```
-❯ nix repl
-Nix 2.24.8
-nix-repl> :lf .
-Added 18 variables.
-
-nix-repl> outputs.legacyPackages.x86_64-linux.a
-«derivation /nix/store/af3rc6phyv80h7aq4y3d08awnq2ja8fp-hello-2.12.1.drv»
-
-nix-repl> outputs.packages.x86_64-linux.a
-«derivation /nix/store/af3rc6phyv80h7aq4y3d08awnq2ja8fp-hello-2.12.1.drv»
-
-nix-repl> outputs.legacyPackages.x86_64-linux.b.c
-«derivation /nix/store/af3rc6phyv80h7aq4y3d08awnq2ja8fp-hello-2.12.1.drv»
-
-nix-repl> outputs.packages.x86_64-linux."b/c"
-«derivation /nix/store/af3rc6phyv80h7aq4y3d08awnq2ja8fp-hello-2.12.1.drv»
+outputs
+├───legacyPackages
+│   ├───aarch64-darwin
+│   │   ├───pkg1: package 'pkg1'
+│   │   └───subdirectory
+│   │       └───pkg2: package 'pkg2'
+│   ├───aarch64-linux
+│   │   ├───pkg1: package 'pkg1'
+│   │   └───subdirectory
+│   │       └───pkg2: package 'pkg2'
+│   ├───x86_64-darwin
+│   │   ├───pkg1: package 'pkg1'
+│   │   └───subdirectory
+│   │       └───pkg2: package 'pkg2'
+│   └───x86_64-linux
+│       ├───pkg1: package 'pkg1'
+│       └───subdirectory
+│           └───pkg2: package 'pkg2'
+└───packages
+    ├───aarch64-darwin
+    │   ├───pkg1: package 'pkg1'
+    │   └───"subdirectory/pkg2": package 'pkg2'
+    ├───aarch64-linux
+    │   ├───pkg1: package 'pkg1'
+    │   └───"subdirectory/pkg2": package 'pkg2'
+    ├───x86_64-darwin
+    │   ├───pkg1: package 'pkg1'
+    │   └───"subdirectory/pkg2": package 'pkg2'
+    └───x86_64-linux
+        ├───pkg1: package 'pkg1'
+        └───"subdirectory/pkg2": package 'pkg2'
 ```
 
 [flake.parts]: https://flake.parts
 [5]: https://github.com/sponsors/drupol
 [donate github]: https://img.shields.io/badge/Sponsor-Github-brightgreen.svg?style=flat-square
-[manual]: https://nixos.org/manual/nixpkgs/stable/index.html#function-library-lib.filesystem.packagesFromDirectoryRecursive
+[packagesFromDirectoryRecursive]: https://nixos.org/manual/nixpkgs/stable/index.html#function-library-lib.filesystem.packagesFromDirectoryRecursive
