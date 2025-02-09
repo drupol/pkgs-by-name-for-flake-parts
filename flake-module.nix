@@ -1,4 +1,4 @@
-toplevel@{
+{
   lib,
   flake-parts-lib,
   inputs,

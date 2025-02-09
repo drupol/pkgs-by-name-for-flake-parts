@@ -98,7 +98,7 @@ Given this `flake.nix` file:
 
 ```
 
-In this given directory structure:
+In this given directory structure, where `pkg1` depends on `pkg2`:
 
 ```
 .
@@ -106,16 +106,14 @@ In this given directory structure:
 ├── flake.nix
 └── packages
     ├── pkg1
-    │   └── package.nix
+    │   └── package.nix
     └── subdirectory
         └── pkg2.nix
 ```
 
-`pkg1` depends on `pkg2`:
-
 ```nix
 # ./packages/pkg1/package.nix
-{ stdenv, dir }:
+{ stdenv, subdirectory }:
 stdenv.mkDerivation {
   name = "pkg1";
   # `subdirectory` contains all packages in the folder `packages/subdirectory`
@@ -123,7 +121,7 @@ stdenv.mkDerivation {
 }
 ```
 
-`pkg2` depends on an input:
+`pkg2` depends on an `input` from `flake.nix`:
 
 ```nix
 # ./packages/subdirectory/pkg2.nix
@@ -137,7 +135,6 @@ stdenv.mkDerivation {
 Note how this package does not have its own directory. You can have either
 `<package name>/package.nix`, or `<package name>.nix`. The former is useful if
 you want to split the package into multiple nix files.
-
 
 This is the structure of the resulting flake outputs:
 
