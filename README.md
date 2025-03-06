@@ -33,9 +33,97 @@ and configure it:
 
 ```nix
   perSystem = {
-    pkgsDirectory = ./nix/pkgs;
+    pkgsDirectory = ./pkgs/by-name;
   };
 ```
+
+Optionally, you can consume your "local" through the `pkgs` attribute by using a custom overlay:
+
+```nix
+  perSystem =
+    { system, config, ... }:
+    {
+      _module.args.pkgs = import inputs.nixpkgs {
+        inherit system;
+        overlays = [
+          (final: prev: {
+            local = config.packages;
+          })
+        ];
+      };
+      pkgsDirectory = ./pkgs/by-name;
+    };
+```
+
+Optionally, you can make the packages publicly accessible through an overlay:
+
+```nix
+  flake = {
+    overlays.default =
+      final: prev:
+      withSystem prev.stdenv.hostPlatform.system (
+        { config, ... }:
+        {
+          local = config.packages;
+        }
+      );
+  };
+```
+
+Find the complete example below.
+
+<details>
+
+<summary>flake.nix</summary>
+
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:/nixos/nixpkgs/nixos-unstable";
+    systems.url = "github:nix-systems/default";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    pkgs-by-name-for-flake-parts.url = "github:drupol/pkgs-by-name-for-flake-parts";
+  };
+
+  outputs =
+    inputs@{ flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } (
+      { withSystem, ... }:
+      {
+        systems = import inputs.systems;
+
+        imports = [
+          inputs.pkgs-by-name-for-flake-parts.flakeModule
+        ];
+
+        perSystem =
+          { system, ... }:
+          {
+            _module.args.pkgs = import inputs.nixpkgs {
+              inherit system;
+              overlays = [
+                inputs.self.overlays.default
+              ];
+            };
+            pkgsDirectory = ./pkgs/by-name;
+          };
+
+        flake = {
+          overlays.default =
+            final: prev:
+            withSystem prev.stdenv.hostPlatform.system (
+              { config, ... }:
+              {
+                local = config.packages;
+              }
+            );
+        };
+      }
+    );
+}
+```
+
+</details>
 
 ## Usage
 
