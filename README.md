@@ -37,7 +37,7 @@ and configure it:
   };
 ```
 
-Optionally, you can consume your "local" through the `pkgs` attribute by using a custom overlay:
+Optionally, you can consume your "local" packages through the `pkgs` attribute by using a custom overlay:
 
 ```nix
   perSystem =
