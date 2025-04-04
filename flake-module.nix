@@ -49,28 +49,24 @@ in
             {
               ${lib.concatStringsSep separator path} = value;
             }
+          else if lib.isAttrs value then
+            lib.concatMapAttrs (name: flattenPkgs separator (path ++ [ name ])) value
           else
-            lib.concatMapAttrs (name: flattenPkgs separator (path ++ [ name ])) value;
+            # Ignore the functions which makeScope returns
+            { };
+
+        inputsScope = lib.makeScope pkgs.newScope (self: {
+          inherit inputs;
+        });
 
         scopeFromDirectory =
           directory:
-          lib.makeScope pkgs.newScope (
-            self:
-            lib.filesystem.packagesFromDirectoryRecursive {
-              inherit directory;
-              callPackage = self.newScope { inherit inputs; };
-            }
-          );
+          lib.filesystem.packagesFromDirectoryRecursive {
+            inherit directory;
+            inherit (inputsScope) newScope callPackage;
+          };
 
-        scope = scopeFromDirectory config.pkgsDirectory;
-
-        # scope.packages is the second function we passed to makeScope. makeScope
-        # calculates the fixpoint of the scope for us, ie. when we now call this
-        # function with scope, scope.callPackage will "know" all locally defined
-        # packages.
-        # We don't have to worry about the performance of this function call, since
-        # Nix is lazy and doesn't compute any equivalent expression more than once.
-        legacyPackages = scope.packages scope;
+        legacyPackages = scopeFromDirectory config.pkgsDirectory;
       in
       lib.mkIf (config.pkgsDirectory != null) {
         inherit legacyPackages;
