@@ -155,6 +155,8 @@ This module has the following configuration attributes:
   value is `null`.
 - `pkgsNameSeparator`: The separator used to concatenate the package name. The
   default value is `/`.
+- `enableLegacyPackages`: Whether to enable the `legacyPackages` attribute in
+  the flake outputs. The default value is `false`.
 
 ## Example
 
@@ -180,6 +182,7 @@ Given this `flake.nix` file:
     ];
     perSystem = { ... }: {
       pkgsDirectory = ./packages;
+      enableLegacyPackages = true;
     };
   };
 }

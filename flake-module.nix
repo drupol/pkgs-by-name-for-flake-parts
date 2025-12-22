@@ -34,6 +34,14 @@ in
               The separator to use when flattening package names.
             '';
           };
+
+          enableLegacyPackages = mkOption {
+            type = types.bool;
+            default = false;
+            description = ''
+              If true, the legacyPackages attribute will be populated.
+            '';
+          };
         };
       }
     );
@@ -68,9 +76,13 @@ in
 
         legacyPackages = scopeFromDirectory config.pkgsDirectory;
       in
-      lib.mkIf (config.pkgsDirectory != null) {
-        inherit legacyPackages;
-        packages = flattenPkgs config.pkgsNameSeparator [ ] legacyPackages;
-      };
+      lib.mkMerge [
+        (lib.mkIf (config.pkgsDirectory != null) {
+          packages = flattenPkgs config.pkgsNameSeparator [ ] legacyPackages;
+        })
+        (lib.mkIf config.enableLegacyPackages {
+          inherit legacyPackages;
+        })
+      ];
   };
 }
