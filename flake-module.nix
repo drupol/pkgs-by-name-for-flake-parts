@@ -49,11 +49,8 @@ in
             {
               ${lib.concatStringsSep separator path} = value;
             }
-          else if lib.isAttrs value then
-            lib.concatMapAttrs (name: flattenPkgs separator (path ++ [ name ])) value
           else
-            # Ignore the functions which makeScope returns
-            { };
+            lib.concatMapAttrs (name: flattenPkgs separator (path ++ [ name ])) value;
 
         inputsScope = lib.makeScope pkgs.newScope (self: {
           inherit inputs;
@@ -66,7 +63,21 @@ in
             inherit (inputsScope) newScope callPackage;
           };
 
-        legacyPackages = scopeFromDirectory config.pkgsDirectory;
+        scope = scopeFromDirectory config.pkgsDirectory;
+
+        # lib.makeScope takes two arguments:
+        #   1. A newScope constructor (pkgs.newScope)
+        #   2. A function (self: { packages... }) that builds the package set
+        #
+        # It returns a scope with helper functions AND a special `packages` attribute
+        # that is the second function we passed in. By calling scope.packages with
+        # scope itself as the argument, we:
+        #   - Calculate the fixpoint (all packages can reference each other)
+        #   - Extract just the packages attrset without helper functions (callPackage, etc.)
+        #   - Avoid conflicts with the flake's top-level packages output
+        #
+        # Nix's laziness means this function call has no performance penalty.
+        legacyPackages = scope.packages scope;
       in
       lib.mkIf (config.pkgsDirectory != null) {
         inherit legacyPackages;
