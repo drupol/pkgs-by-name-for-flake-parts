@@ -49,8 +49,10 @@ in
             {
               ${lib.concatStringsSep separator path} = value;
             }
+          else if lib.isAttrs value then
+            lib.concatMapAttrs (name: flattenPkgs separator (path ++ [ name ])) value
           else
-            lib.concatMapAttrs (name: flattenPkgs separator (path ++ [ name ])) value;
+            { };
 
         inputsScope = lib.makeScope pkgs.newScope (self: {
           inherit inputs;
