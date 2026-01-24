@@ -79,7 +79,22 @@ in
         #   - Avoid conflicts with the flake's top-level packages output
         #
         # Nix's laziness means this function call has no performance penalty.
-        legacyPackages = scope.packages scope;
+        extractPackages = scope:
+          let
+            shouldRecurse =
+              lib.isAttrs scope
+              && !(lib.isDerivation scope)
+              && scope ? "packages"
+              && lib.isFunction scope.packages
+            ;
+            mappedSet =
+              lib.mapAttrs
+                (_: extractPackages)
+                (scope.packages scope);
+          in
+          if shouldRecurse then mappedSet else scope;
+
+        legacyPackages = extractPackages scope;
       in
       lib.mkIf (config.pkgsDirectory != null) {
         inherit legacyPackages;
