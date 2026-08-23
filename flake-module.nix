@@ -35,7 +35,7 @@ in
             '';
           };
 
-          respectPlatforms = mkOption {
+          pkgsFilterByPlatforms = mkOption {
             type = types.bool;
             default = false;
             description = ''
@@ -60,7 +60,7 @@ in
           separator: path: value:
           if lib.isDerivation value then
             lib.optionalAttrs
-              (!config.respectPlatforms || lib.meta.availableOn hostPlatform value)
+              (!config.pkgsFilterByPlatforms || lib.meta.availableOn hostPlatform value)
               {
                 ${lib.concatStringsSep separator path} = value;
               }

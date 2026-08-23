@@ -155,7 +155,7 @@ This module has the following configuration attributes:
   value is `null`.
 - `pkgsNameSeparator`: The separator used to concatenate the package name. The
   default value is `/`.
-- `respectPlatforms`: Whether to omit packages whose
+- `pkgsFilterByPlatforms`: Whether to omit packages whose
   `meta.platforms`/`meta.badPlatforms` exclude the current system. The default
   value is `false`.
 
