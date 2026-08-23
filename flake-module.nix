@@ -34,6 +34,17 @@ in
               The separator to use when flattening package names.
             '';
           };
+
+          respectPlatforms = mkOption {
+            type = types.bool;
+            default = false;
+            description = ''
+              Whether to restrict the generated `packages` output to
+              derivations whose `meta.platforms`/`meta.badPlatforms` include
+              the current system. Filtered-out derivations remain reachable
+              through `legacyPackages`.
+            '';
+          };
         };
       }
     );
@@ -43,12 +54,16 @@ in
     perSystem =
       { config, pkgs, ... }:
       let
+        inherit (pkgs.stdenv) hostPlatform;
+
         flattenPkgs =
           separator: path: value:
           if lib.isDerivation value then
-            {
-              ${lib.concatStringsSep separator path} = value;
-            }
+            lib.optionalAttrs
+              (!config.respectPlatforms || lib.meta.availableOn hostPlatform value)
+              {
+                ${lib.concatStringsSep separator path} = value;
+              }
           else if lib.isAttrs value then
             lib.concatMapAttrs (name: flattenPkgs separator (path ++ [ name ])) value
           else
