@@ -170,11 +170,13 @@ This module has the following configuration attributes:
       `packages` attrset. Filtered-out packages still remain reachable through
       `legacyPackages`, which is never filtered.
 
-      **Note:** Enabling this option incurs a performance penalty, since
-      accessing any part of `packages.<system>` requires Nix to check *every*
+      **Note:** Enabling this option incurs a slight performance penalty, since
+      accessing any part of `packages.<system>` requires Nix to check _every_
       package's `meta`, even when only one package is requested. The cost grows
       with the number of packages and with how expensive they are to evaluate.
-      However, the should be negligible for small package sets.
+      However, this should be negligible for small package sets. Also beware
+      that packages whose `meta` fails to evaluate will make the _entire_
+      package set unusable.
 
       _See also: [Relevant
       issue](https://github.com/drupol/pkgs-by-name-for-flake-parts/issues/7)._

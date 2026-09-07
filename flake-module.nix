@@ -43,6 +43,10 @@ in
               derivations whose `meta.platforms`/`meta.badPlatforms` include
               the current system. Filtered-out derivations remain reachable
               through `legacyPackages`.
+
+              Note: Enabling this requires evaluating *every* package's `meta`
+              when accessing *any* part of `packages.<system>`. Negligible for
+              small pkgs sets, but cost grows with set size and eval cost.
             '';
           };
         };
