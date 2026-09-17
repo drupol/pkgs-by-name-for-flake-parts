@@ -155,6 +155,32 @@ This module has the following configuration attributes:
   value is `null`.
 - `pkgsNameSeparator`: The separator used to concatenate the package name. The
   default value is `/`.
+- `pkgsFilterByPlatforms`: Whether to omit packages whose
+  `meta.platforms`/`meta.badPlatforms` exclude the current system. The default
+  value is `false`.
+
+  <details>
+    <summary>Click to see explanation...</summary>
+
+    - **`false` (default):** All packages will be included in
+      `packages.<system>`, regardless of whether the package states itself to be
+      incompatible. This *will* result in a failure to evaluate on that
+      incompatible system, breaking things like `nix flake check`.
+    - **`true`:** Incompatible packages will be filtered out of the flake's
+      `packages` attrset. Filtered-out packages still remain reachable through
+      `legacyPackages`, which is never filtered.
+
+      **Note:** Enabling this option incurs a slight performance penalty, since
+      accessing any part of `packages.<system>` requires Nix to check _every_
+      package's `meta`, even when only one package is requested. The cost grows
+      with the number of packages and with how expensive they are to evaluate.
+      However, this should be negligible for small package sets. Also beware
+      that packages whose `meta` fails to evaluate will make the _entire_
+      package set unusable.
+
+      _See also: [Relevant
+      issue](https://github.com/drupol/pkgs-by-name-for-flake-parts/issues/7)._
+  </details>
 
 ## Example
 
